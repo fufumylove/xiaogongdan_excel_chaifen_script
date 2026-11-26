@@ -135,7 +135,9 @@ def parse_workbook(path: str | Path) -> ProductInfo:
         raise FileNotFoundError(f"总文件不存在：{source}")
     if source.suffix.lower() != ".xlsx":
         raise ValueError(f"仅支持 .xlsx 文件：{source}")
-    wb = load_workbook(source, data_only=True, read_only=True)
+    # 不用 read_only：部分系统导出的 xlsx 没有 dimension 标签，
+    # 只读模式下 max_row 为 None，会导致章节扫描失败。
+    wb = load_workbook(source, data_only=True)
     try:
         if "Sheet1" not in wb.sheetnames:
             raise ValueError(f"总文件缺少 Sheet1 工作表：{source}")

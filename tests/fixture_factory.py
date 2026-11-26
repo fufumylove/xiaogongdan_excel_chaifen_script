@@ -1,5 +1,7 @@
 """在临时目录生成合成总文件，避免把二进制样本写入仓库。"""
 
+import re
+import zipfile
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -61,3 +63,16 @@ def make_source_workbook(
 
     wb.save(path)
     return path
+
+
+def strip_dimension(path: Path) -> Path:
+    """复制 xlsx 并删除 sheet1 的 dimension 标签，模拟某些导出文件。"""
+    target = path.with_name(f"{path.stem}-nodim.xlsx")
+    with zipfile.ZipFile(path) as source, zipfile.ZipFile(target, "w") as result:
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename == "xl/worksheets/sheet1.xml":
+                text = data.decode("utf-8")
+                data = re.sub(r"<dimension\b[^>]*/>", "", text, count=1).encode("utf-8")
+            result.writestr(item, data)
+    return target

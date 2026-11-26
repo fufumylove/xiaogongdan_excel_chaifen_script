@@ -4,7 +4,7 @@ import warnings
 
 import pytest
 
-from fixture_factory import make_source_workbook
+from fixture_factory import make_source_workbook, strip_dimension
 from wage_converter.parser import parse_workbook
 
 
@@ -42,6 +42,22 @@ def test_text_price_is_converted_with_warning(tmp_path):
         info = parse_workbook(path)
     assert info.operations[0].price == pytest.approx(0.1)
     assert any("工价" in str(w.message) for w in caught)
+
+
+def test_workbook_without_dimension_tag(tmp_path):
+    """部分系统导出的 xlsx 没有 dimension，仍能正常解析。"""
+    source = make_source_workbook(
+        tmp_path / "source.xlsx",
+        counts={"车工": 3, "手工": 2, "备料": 1, "包装": 2, "裁剪": 1},
+    )
+    stripped = strip_dimension(source)
+    info = parse_workbook(stripped)
+    assert [len(s.operations) for s in info.sections.values()] == [3, 2, 1, 2, 1]
+    assert [op.code(info.product_no) for op in info.operations] == [
+        "12345-A01", "12345-A02", "12345-A03",
+        "12345-B01", "12345-B02", "12345-C01",
+        "12345-D01", "12345-D02", "12345-E01",
+    ]
 
 
 def test_missing_section_raises(tmp_path):
