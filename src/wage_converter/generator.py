@@ -15,6 +15,7 @@ from .config import (
     REPORT_RATIO,
     ROUTE_HEADERS,
     SECTION_ORDER,
+    STEM_FALLBACK_TEMPLATES,
 )
 from .models import ProductInfo
 
@@ -53,10 +54,12 @@ def generate_route_workbook(info: ProductInfo) -> Workbook:
     for route_no, key in enumerate(SECTION_ORDER, start=1):
         section = info.sections[key]
         names = [op.display_name(info.product_name) for op in section.operations]
+        prefix = f"{info.product_no}-" if info.product_no else ""
+        suffix = f"-{info.product_name}" if info.product_name else ""
         ws.append(
             [
-                f"{info.product_no}-{route_no:02d}",
-                f"{key}-{info.product_name}",
+                f"{prefix}{route_no:02d}",
+                f"{key}{suffix}",
                 "，".join(names),
             ]
         )
@@ -71,8 +74,8 @@ def generate_performance_workbook(info: ProductInfo) -> Workbook:
     for op in info.operations:
         ws.append(
             [
-                info.product_no,
-                info.product_name,
+                info.product_no or None,
+                info.product_name or None,
                 None,
                 op.display_name(info.product_name),
                 PAY_METHOD,
@@ -91,6 +94,8 @@ def generate_performance_workbook(info: ProductInfo) -> Workbook:
 
 def output_filename(kind: str, info: ProductInfo) -> str:
     """文件名中的非法字符替换为下划线，单元格内容不受影响。"""
+    if not info.product_no and not info.product_name:
+        return STEM_FALLBACK_TEMPLATES[kind].format(stem=info.source_stem)
     safe_name = ILLEGAL_FILENAME_CHARS.sub("_", info.product_name)
     return FILE_TEMPLATES[kind].format(product_no=info.product_no, product_name=safe_name)
 

@@ -65,6 +65,43 @@ def make_source_workbook(
     return path
 
 
+def make_blank_template_workbook(path: Path) -> Path:
+    """模拟用户手写模板：章节与序号齐全，只有每章前两条有名称，无产品信息与工价。"""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws["A1"] = "润植嘉奇产品制造工序工价表"
+    ws["A4"] = "产品名称:  "
+    ws["D4"] = "产品号："
+
+    titles = (
+        (5, "A", "一、车工工序", None),
+        (5, "D", "二、手工工序", None),
+        (13, "D", "三、备料工序", None),
+        (19, "D", "四、包装工序", None),
+        (29, "D", "五、裁剪工序", None),
+    )
+    for row, col, title, _ in titles:
+        ws[f"{col}{row}"] = title
+        ws[f"{'C' if col == 'A' else 'F'}{row}"] = "工价"
+
+    def fill(seq_col: str, name_col: str, start: int, count: int, names: tuple[str, ...]):
+        for i in range(1, count + 1):
+            row = start + i
+            ws[f"{seq_col}{row}"] = i
+            if i <= len(names):
+                ws[f"{name_col}{row}"] = names[i - 1]
+
+    fill("A", "B", 5, 28, ("车工一", "车工二"))
+    fill("D", "E", 5, 4, ("手工一", "手工二"))
+    fill("D", "E", 13, 5, ("备料一", "备料二"))
+    fill("D", "E", 19, 8, ("包装一", "包装二"))
+    fill("D", "E", 29, 16, ("裁剪一", "裁剪二"))
+
+    wb.save(path)
+    return path
+
+
 def strip_dimension(path: Path) -> Path:
     """复制 xlsx 并删除 sheet1 的 dimension 标签，模拟某些导出文件。"""
     target = path.with_name(f"{path.stem}-nodim.xlsx")

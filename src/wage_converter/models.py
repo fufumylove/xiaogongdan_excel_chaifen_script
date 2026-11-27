@@ -12,7 +12,7 @@ class Operation:
     section_key: str
     index: int
     name: str
-    price: float
+    price: float | None = None
     source_row: int = 0
 
     @property
@@ -20,10 +20,12 @@ class Operation:
         return SECTION_BY_KEY[self.section_key].letter
 
     def code(self, product_no: str) -> str:
-        return f"{product_no}-{self.letter}{self.index:02d}"
+        prefix = f"{product_no}-" if product_no else ""
+        return f"{prefix}{self.letter}{self.index:02d}"
 
     def display_name(self, product_name: str) -> str:
-        return f"{self.name}-{product_name}"
+        suffix = f"-{product_name}" if product_name else ""
+        return f"{self.name}{suffix}"
 
 
 @dataclass
@@ -45,6 +47,7 @@ class ProductInfo:
     product_no: str
     product_name: str
     sections: dict[str, Section] = field(default_factory=dict)
+    source_stem: str = ""
 
     @property
     def operations(self) -> list[Operation]:

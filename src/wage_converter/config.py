@@ -70,4 +70,11 @@ FILE_TEMPLATES = {
     "performance": "3.绩效-{product_no}#{product_name}.xlsx",
 }
 
+# 产品信息缺失时回退到源文件名，避免出现 “1.工序-#.xlsx”
+STEM_FALLBACK_TEMPLATES = {
+    "process": "1.工序-{stem}.xlsx",
+    "route": "2.工艺路线-{stem}.xlsx",
+    "performance": "3.绩效-{stem}.xlsx",
+}
+
 ILLEGAL_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|]')

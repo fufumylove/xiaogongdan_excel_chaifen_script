@@ -35,6 +35,13 @@
 - 模板差异（仅记录，不复刻）：系统导出的工序为 14 列 51 行（缺裁剪 E16、含审计列），工艺路线为 5 列 56 行（含 5 条父级行），绩效为 18 列 52 行（倒序、含 E16）；与新导出不一致属于源数据导出口径，脚本以总文件为准。
 - 验证：`pytest -q` → 14 passed；CLI 实跑生成三份文件并逐格核对关键值。
 
+## 手写空白模板拆分：test1.xlsx（2026-11-27）
+- 输入：空间文件 `test1.xlsx`（节点 `CEraif9hmIRWvjpkY9H2a9`），已归档到 `samples/test1.xlsx`。实测为空白模板：五章齐全、序号共 61 个，仅每章前两行有工序名称（共 10 条），产品号/产品名称/工价全空。
+- 用户确认：①只输出有名称的 10 条；②拼接去掉空占位符（`A01`、`01`、`车工`、`车工一`）；③固定值照旧（所有人/1/其他/计件），工资单价留空；④文件名用源文件名 `test1`。
+- 方案：CLI 增加 `--allow-missing`（默认严格模式不变）；`parse_sheet` 宽松模式保留“有名称无工价”行并以 `None` 表示空价；`Operation.code/display_name` 与路线编号/名称条件拼接；产品信息为空时文件名回退到 `source_stem`。
+- 结果：工序 11 行×8 列（A01…E02）、工艺路线 6 行×3 列（01…05、车工…裁剪）、绩效 11 行×13 列（产品编号/名称与工资单价为空，计价方式=计件）；三份表头一个不少。
+- 验证：`pytest -q` → 20 passed（新增 6 项宽松模式测试）；CLI 实跑生成三份文件并逐格核对。
+
 ## 决策与变更
 - 工序列数：示例 6 列 → 需求确认后 8 列。
 - 工艺路线行序：示例 04/03/02/05/01 → 需求确认后 01/02/03/04/05。
@@ -42,6 +49,7 @@
 - 样本文件：`samples/` 保留两轮共八份空间文件用于回归；`output/` 为运行时生成物，不纳入版本管理。
 - 解析器读取方式：只读 → 非只读，兼容缺少 dimension 标签的导出文件；输出规则不变。
 - 新样本系统导出模板（14/5/18 列、含父级行、倒序）不作为生成目标，仅作参考。
+- 手写空白模板走 `--allow-missing` 宽松模式：缺失字段留空、拼接去空占位符、文件名回退源文件名；严格模式仍为默认。
 
 ## 复现步骤
 ```bash
@@ -49,4 +57,5 @@ pip install -r requirements.txt
 pytest -q
 python -m wage_converter.cli --input "samples/9672848#冰包（双肩 条纹）.xlsx" --output-dir output
 python -m wage_converter.cli --input "samples/9894712#冰包（格子）.xlsx" --output-dir output
+python -m wage_converter.cli --input samples/test1.xlsx --output-dir output --allow-missing
 ```

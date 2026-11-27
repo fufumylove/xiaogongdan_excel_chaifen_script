@@ -20,7 +20,7 @@ def _text(value: object) -> str:
     return "" if value is None else str(value).strip()
 
 
-def _find_product_info(ws) -> tuple[str, str]:
+def _find_product_info(ws, *, allow_missing: bool = False) -> tuple[str, str]:
     """扫描全部单元格提取产品号与产品名称。"""
     product_no = ""
     product_name = ""
@@ -39,6 +39,8 @@ def _find_product_info(ws) -> tuple[str, str]:
                     product_name = match.group(1).strip()
             if product_no and product_name:
                 return product_no, product_name
+    if allow_missing:
+        return product_no, product_name
     missing = []
     if not product_name:
         missing.append("产品名称")
@@ -87,9 +89,9 @@ def _parse_price(value: object, row: int) -> float | None:
     return None
 
 
-def parse_sheet(ws) -> ProductInfo:
+def parse_sheet(ws, *, allow_missing: bool = False) -> ProductInfo:
     """解析单个工作表。"""
-    product_no, product_name = _find_product_info(ws)
+    product_no, product_name = _find_product_info(ws, allow_missing=allow_missing)
     titles = _find_titles(ws)
 
     by_column: dict[int, list[tuple[int, str]]] = {}
@@ -112,7 +114,7 @@ def parse_sheet(ws) -> ProductInfo:
             if not name:
                 continue
             price = _parse_price(ws.cell(row=row, column=price_col).value, row)
-            if price is None:
+            if price is None and not allow_missing:
                 continue
             section.operations.append(
                 Operation(
@@ -128,7 +130,7 @@ def parse_sheet(ws) -> ProductInfo:
     return ProductInfo(product_no=product_no, product_name=product_name, sections=sections)
 
 
-def parse_workbook(path: str | Path) -> ProductInfo:
+def parse_workbook(path: str | Path, *, allow_missing: bool = False) -> ProductInfo:
     """读取总文件并返回解析结果；文件不可读时抛出明确异常。"""
     source = Path(path)
     if not source.is_file():
@@ -141,6 +143,8 @@ def parse_workbook(path: str | Path) -> ProductInfo:
     try:
         if "Sheet1" not in wb.sheetnames:
             raise ValueError(f"总文件缺少 Sheet1 工作表：{source}")
-        return parse_sheet(wb["Sheet1"])
+        info = parse_sheet(wb["Sheet1"], allow_missing=allow_missing)
+        info.source_stem = source.stem
+        return info
     finally:
         wb.close()
